@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js + Prisma + Shadcn UI + Better Auth Template
+
+This is a modern web application template built with Next.js, featuring Prisma ORM for database management, Shadcn UI for beautiful components, and Better Auth for secure authentication.
+
+## Features
+
+- Next.js 15 with Turbopack for improved development experience
+- Prisma ORM with Accelerate extension for enhanced performance
+- Shadcn UI components for a modern and consistent UI
+- Better Auth for secure authentication
+- Docker support for consistent development environments
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Modern UI components with animations
+- Protected routes and authentication middleware
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+3. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Configure your database connection
+   - Set up authentication providers
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+4. Start the development server:
+   ```bash
+   pnpm dev
+   ```
+
+The application will be available at `http://localhost:3000`
+
+## Project Structure
+
+```
+├── /src
+│   ├── /app
+│   │   ├── /(protected)     # Protected routes
+│   │   ├── /signin          # Authentication pages
+│   │   └── /layout.tsx      # Root layout
+│   ├── /components          # Reusable React components
+│   └── /public              # Static assets
+├── /prisma                  # Prisma schema and migrations
+└── /public                  # Static assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prisma Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Generate Prisma Client:
+   ```bash
+   pnpm prisma generate
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Run migrations:
+   ```bash
+   pnpm prisma migrate dev
+   ```
 
-## Learn More
+## Authentication
 
-To learn more about Next.js, take a look at the following resources:
+The application uses Better Auth for handling authentication. Key authentication components:
+- `/src/app/signin/SigninForm.tsx` - Sign-in form
+- `/src/components/Navbar.tsx` - Navigation with auth state
+- `/src/components/SignoutButton.tsx` - Sign-out functionality
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Docker
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application includes Docker support for development and deployment.
 
-## Deploy on Vercel
+```bash
+# Start Docker containers (development)
+docker-compose up -d
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Stop Docker containers
+docker-compose down
+```
+
+## Development Scripts
+
+- `pnpm dev` - Start development server with Turbopack
+- `pnpm build` - Build the application for production
+- `pnpm start` - Start the production server
+- `pnpm lint` - Run ESLint for code linting
+
+## Technologies Used
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Database**: Prisma ORM with PostgreSQL
+- **UI**: Shadcn UI, Tailwind CSS, Framer Motion
+- **Authentication**: Better-Auth
+- **Development**: Docker, ESLint, Turbopack
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
