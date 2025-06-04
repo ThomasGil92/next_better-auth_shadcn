@@ -66,6 +66,26 @@ The application uses Better Auth for handling authentication. Key authentication
 - `/src/components/Navbar.tsx` - Navigation with auth state
 - `/src/components/SignoutButton.tsx` - Sign-out functionality
 
+## Axios Configuration
+
+The project uses a custom Axios instance configured in [/src/lib/axios.ts](cci:7://file:///Users/totogil/dev_web/next_prisma_shadcn_better-auth_template/src/lib/axios.ts:0:0-0:0) for handling HTTP requests. Key features include:
+
+- **Base URL Configuration**: Automatically sets up the base URL from `NEXT_PUBLIC_API_URL`
+- **Authentication**: 
+  - Automatic token management using localStorage
+  - Request interceptor for adding auth headers
+  - Token refresh handling with queue management
+- **Security Features**:
+  - CSRF protection with `withCredentials: true`
+  - Secure token storage
+  - Automatic session refresh
+- **Error Handling**:
+  - Custom error interceptors
+  - 401 error handling with token refresh
+  - Request queue management for failed requests
+
+The axios instance is configured to work seamlessly with the authentication system, ensuring that all protected API requests are properly authenticated.
+
 ## Docker
 
 The application includes Docker support for development and deployment.
