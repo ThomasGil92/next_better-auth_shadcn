@@ -3,6 +3,7 @@
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { clearToken } from "@/lib/axios";
 
 export default function SignoutButton() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function SignoutButton() {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          authClient.getSession();
+          clearToken();
           router.refresh();
         },
       },
@@ -18,5 +19,5 @@ export default function SignoutButton() {
     // Optionally redirect
     // redirect('/signin');
   }
-  return <Button onClick={handleSignout}>Se deconnecter</Button>;
+  return <Button onClick={handleSignout}>Signout</Button>;
 }

@@ -1,181 +1,103 @@
-import axios, { InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { authClient } from "./auth-client";
 
-// Constants
 const TOKEN_KEY = "auth_token";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
 
-// Create an Axios instance
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true,
-});
-
-// Token management
-const getStoredToken = (): string | null => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+// Simple token storage
+const getToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+const setToken = (token: string) => {
+  if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
+};
+export const clearToken = () => {
+  if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
 };
 
-const storeToken = (token: string): void => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
-};
-
-const clearStoredToken = (): void => {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-};
-
-// Request queue management
-interface QueuedRequest {
-  resolve: (value: string | PromiseLike<string>) => void;
-  reject: (reason?: Error) => void;
-}
-
+// Request queue for token refresh
 let isRefreshing = false;
-let failedQueue: QueuedRequest[] = [];
+let failedQueue: Array<() => void> = [];
 
-const processQueue = (
-  error: Error | null,
-  token: string | null = null,
-): void => {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      // On s'assure de toujours passer une chaîne non-undefined
-      resolve(token || "");
-    }
-  });
+const processQueue = (error?: Error) => {
+  failedQueue.forEach((promise) => (error ? promise() : promise()));
   failedQueue = [];
 };
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    // Skip if it's a refresh token request
-    if (config.url?.includes("/auth/token")) {
-      return config;
+// Refresh token function
+const refreshToken = async () => {
+  try {
+    let newToken: string | null = null;
+
+    await authClient.getSession({
+      fetchOptions: {
+        onSuccess: (ctx: any) => {
+          newToken = ctx.response.headers.get("set-auth-jwt");
+          if (newToken) setToken(newToken);
+        },
+      },
+    });
+
+    if (!newToken) throw new Error("No token received");
+    return newToken;
+  } catch (error) {
+    clearToken();
+    if (typeof window !== "undefined") {
+      await authClient.signOut();
+      window.location.href = "/signin";
     }
+    throw error;
+  }
+};
 
-    // Check for stored token first
-    const storedToken = getStoredToken();
-    if (storedToken) {
-      config.headers.Authorization = `Bearer ${storedToken}`;
-      return config;
-    }
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
+});
 
-    // If no stored token, try to get from session
-    try {
-      const { data: session } = await authClient.getSession();
-      const token = session?.session?.token;
+// Request interceptor
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-      if (token) {
-        storeToken(token);
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error("Failed to get session:", error);
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
-// Response interceptor to handle 401 errors
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // If it's not a 401 error, reject immediately
-    if (error.response?.status !== 401) {
+    // Skip if not 401 or already retried
+    if (error.response?.status !== 401 || !originalRequest) {
       return Promise.reject(error);
     }
-
-    // Prevent infinite loops on refresh token endpoint
-    if (
-      originalRequest.url?.includes("/auth/token") ||
-      originalRequest._retry
-    ) {
-      // Redirect to login page
-      if (typeof window !== "undefined") {
-        clearStoredToken();
-        await authClient.signOut();
-        window.location.href = "/signin";
-      }
-      return Promise.reject(error);
-    }
-
-    // Mark that we've already tried to refresh the token
-    originalRequest._retry = true;
 
     if (isRefreshing) {
-      // If refresh is already in progress, queue the request
-      try {
-        const newToken = await new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
+      return new Promise((resolve, reject) => {
+        failedQueue.push(() => {
+          originalRequest.headers.Authorization = `Bearer ${getToken()}`;
+          resolve(api(originalRequest));
         });
-
-        if (newToken) {
-          originalRequest.headers = originalRequest.headers || {};
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        }
-        return api(originalRequest);
-      } catch (err) {
-        return Promise.reject(err);
-      }
+      });
     }
 
     isRefreshing = true;
+    originalRequest._retry = true;
 
     try {
-      // Try to get a new token using the refresh token
-      const { data } = await axios.post(
-        `${APP_URL}/api/auth/token`,
-        {},
-        { withCredentials: true },
-      );
-
-      if (!data.token) {
-        throw new Error("No token received from refresh endpoint");
-      }
-
-      // Store the new token
-      storeToken(data.token);
-
-      // Update the original request with the new token
-      originalRequest.headers = originalRequest.headers || {};
-      originalRequest.headers.Authorization = `Bearer ${data.token}`;
-
-      // Process any queued requests with the new token
-      processQueue(null, data.token);
-
-      // Retry the original request
+      const newToken = await refreshToken();
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      processQueue();
       return api(originalRequest);
-    } catch (refreshError) {
-      // If refresh fails, clear auth and redirect to login
-      processQueue(
-        refreshError instanceof Error
-          ? refreshError
-          : new Error("Token refresh failed"),
-      );
-      if (typeof window !== "undefined") {
-        clearStoredToken();
-        await authClient.signOut();
-        window.location.href = "/signin";
-      }
-      return Promise.reject(refreshError);
+    } catch (error) {
+      processQueue(error);
+      return Promise.reject(error);
     } finally {
       isRefreshing = false;
     }

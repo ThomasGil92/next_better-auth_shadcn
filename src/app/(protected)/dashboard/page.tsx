@@ -33,7 +33,9 @@ export default async function DashboardPage() {
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
           <Card>
             <CardHeader>
-              <CardTitle>Welcome back, <UserName name={user.name || "User"} /> !</CardTitle>
+              <CardTitle>
+                Welcome back, <UserName name={user.name || "User"} /> !
+              </CardTitle>
               <CardDescription>
                 Here&apos;s your dashboard overview
               </CardDescription>

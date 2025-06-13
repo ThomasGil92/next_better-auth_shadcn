@@ -20,14 +20,14 @@ export function SigninForm() {
       <AnimatePresence>
         {loading && (
           <motion.div
-            className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"
-            initial="hidden"
-            animate="visible"
+            className='fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center'
+            initial='hidden'
+            animate='visible'
             exit={{ opacity: 0 }}
             variants={loadingOverlay}
           >
             <motion.div
-              className="w-12 h-12 border-4 border-blue-500 rounded-full"
+              className='w-12 h-12 border-4 border-blue-500 rounded-full'
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
